@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Expense Splitter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Library for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .animate-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        canvas {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+
+        /* PDF specific styling to ensure inputs look like text in the export */
+        .pdf-export input {
+            border: none !important;
+            background: transparent !important;
+            padding-left: 0 !important;
+        }
+        .pdf-export .no-pdf {
+            display: none !important;
+        }
+        .pdf-export .pdf-page-break {
+            page-break-before: always;
+        }
+        /* PDF Export Fixes: Remove glass effects and enforce grid layout */
+        .pdf-export .glass-card {
+            background: #ffffff !important;
+            backdrop-filter: none !important;
+            box-shadow: none !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        .pdf-export .glass-card.bg-slate-800 {
+            background: #1e293b !important;
+            color: #ffffff !important;
+        }
+        /* Force 2-column layout for totals section in PDF */
+        .pdf-export .grid-cols-1.md\:grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+        /* Fix for chart cutting and totals display in PDF */
+        .pdf-export canvas {
+            height: 100% !important;
+            width: 100% !important;
+        }
+        .pdf-export #grandTotalDisplay {
+            font-size: 2.5rem !important;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 flex flex-col md:flex-row items-center justify-start gap-8">
+            <img src="logo1.png" alt="Spenderly" class="h-32 w-auto">
+            <div class="text-left">
+                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Spenderly - Modern Expense Tracker & Visualizer</h1>
+                <p class="text-slate-500 mt-2">Divide costs and visualize distributions</p>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Configuration Sidebar -->
+            <div class="lg:col-span-1 space-y-6 no-pdf">
+                <div class="glass-card rounded-2xl p-6">
+                    <h2 class="text-lg font-semibold text-slate-800 mb-4 border-b pb-2">Setup Details</h2>
+                    
+                    <div class="space-y-4">
+                        <!-- Expense Title -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Expense Title</label>
+                            <input type="text" id="expenseTitle" placeholder="e.g., Weekend Trip" 
+                                class="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all">
+                        </div>
+
+                        <!-- Currency Selector -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Currency</label>
+                            <select id="currencySelector" onchange="updateCurrencySymbol()" 
+                                class="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all">
+                                <option value="$">USD - United States Dollar ($)</option>
+                                <option value="€">EUR - Euro (€)</option>
+                                <option value="£">GBP - British Pound (£)</option>
+                                <option value="₹">INR - Indian Rupee (₹)</option>
+                                <option value="¥">JPY/CNY - Yen/Yuan (¥)</option>
+                                <option value="A$">AUD - Australian Dollar (A$)</option>
+                                <option value="C$">CAD - Canadian Dollar (C$)</option>
+                                <option value="CHF">CHF - Swiss Franc (CHF)</option>
+                                <option value="₩">KRW - South Korean Won (₩)</option>
+                                <option value="د.إ">AED - UAE Dirham (د.إ)</option>
+                            </select>
+                        </div>
+
+                        <!-- Number of People -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Number of People</label>
+                            <input type="number" id="peopleCount" min="1" max="20" value="1"
+                                class="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all">
+                        </div>
+
+                        <!-- Person Names Management -->
+                        <div id="namesContainer" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-2 border-t pt-4 mt-4 hidden">
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Participant Names</label>
+                            <!-- Name inputs will be injected here -->
+                        </div>
+
+                        <!-- Add Category -->
+                        <div class="pt-4 border-t">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">New Category</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="categoryName" placeholder="e.g., Food"
+                                    class="flex-1 px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all">
+                                <button onclick="addCategory()" 
+                                    class="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Download Button -->
+                        <div class="pt-4">
+                            <button id="downloadBtn" onclick="downloadPDF()" 
+                                class="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-semibold transition-all shadow-lg active:scale-[0.98]">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Download Report (.pdf)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="lg:col-span-2 space-y-6" id="exportArea">
+                <!-- Table Section (Active Sheet) -->
+                <div class="space-y-4">
+                    <div class="glass-card rounded-xl p-4 flex items-center justify-between bg-white/50">
+                        <h2 id="tableHeadingTitle" class="text-xl font-bold text-slate-800 truncate pr-4">Untitled Expense</h2>
+                        <span class="text-xs font-bold px-2 py-1 rounded bg-slate-100 text-slate-500 uppercase tracking-widest no-pdf">Active Sheet</span>
+                    </div>
+
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-left border-collapse" id="mainTable">
+                                <thead>
+                                    <tr id="tableHeader" class="bg-slate-50 border-b border-slate-200">
+                                        <!-- Person columns will be injected here -->
+                                    </tr>
+                                </thead>
+                                <tbody id="tableBody" class="divide-y divide-slate-100">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                                <tfoot class="bg-slate-50 font-bold border-t-2 border-slate-200">
+                                    <tr id="tableFooter">
+                                        <!-- Foot totals injected here -->
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div id="emptyState" class="p-12 text-center text-slate-400 no-pdf">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <p>No categories added yet. Start by adding one in the sidebar.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Totals & Chart -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pdf-page-break">
+                    <!-- Stats Summary -->
+                    <div class="glass-card rounded-2xl p-6 bg-slate-800 text-white flex flex-col justify-center">
+                        <h2 class="text-lg font-semibold mb-2 opacity-90">Total Combined</h2>
+                        <div id="grandTotalDisplay" class="text-5xl font-bold">$ 0.00</div>
+                        <p class="text-sm mt-4 opacity-80" id="currentTitleDisplaySummary">Untitled Expense</p>
+                    </div>
+
+                    <!-- Visualization Card -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <h2 class="text-lg font-semibold text-slate-800 mb-4 border-b pb-2">Expense Distribution</h2>
+                        <div class="relative h-64 flex items-center justify-center">
+                            <canvas id="expenseChart"></canvas>
+                            <div id="noDataChart" class="absolute text-slate-400 text-sm italic no-pdf">Add data to see chart</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let categories = [];
+        let peopleCount = 1;
+        let personNames = ["Person 1"];
+        let currencySymbol = '$';
+        let chartInstance = null;
+
+        const expenseTitleInput = document.getElementById('expenseTitle');
+        const peopleCountInput = document.getElementById('peopleCount');
+        const namesContainer = document.getElementById('namesContainer');
+        const categoryNameInput = document.getElementById('categoryName');
+        const currencySelector = document.getElementById('currencySelector');
+        const tableHeader = document.getElementById('tableHeader');
+        const tableBody = document.getElementById('tableBody');
+        const tableFooter = document.getElementById('tableFooter');
+        const grandTotalDisplay = document.getElementById('grandTotalDisplay');
+        const currentTitleDisplaySummary = document.getElementById('currentTitleDisplaySummary');
+        const tableHeadingTitle = document.getElementById('tableHeadingTitle');
+        const emptyState = document.getElementById('emptyState');
+        const noDataChart = document.getElementById('noDataChart');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        // Listeners
+        expenseTitleInput.addEventListener('input', (e) => {
+            const title = e.target.value || "Untitled Expense";
+            currentTitleDisplaySummary.textContent = title;
+            tableHeadingTitle.textContent = title;
+        });
+
+        peopleCountInput.addEventListener('input', (e) => {
+            let val = parseInt(e.target.value);
+            if (isNaN(val) || val < 1) val = 1;
+            if (val > 20) val = 20;
+            peopleCount = val;
+            updatePersonNamesArray();
+            renderNamesInputs();
+            renderTable();
+        });
+
+        function updatePersonNamesArray() {
+            if (personNames.length < peopleCount) {
+                for (let i = personNames.length; i < peopleCount; i++) {
+                    personNames.push(`Person ${i + 1}`);
+                }
+            } else if (personNames.length > peopleCount) {
+                personNames = personNames.slice(0, peopleCount);
+            }
+        }
+
+        function renderNamesInputs() {
+            if (peopleCount > 0) {
+                namesContainer.classList.remove('hidden');
+                namesContainer.innerHTML = '<label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Participant Names</label>';
+                personNames.forEach((name, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center gap-2 mb-2';
+                    div.innerHTML = `
+                        <span class="text-xs text-slate-400 w-4">${i + 1}</span>
+                        <input type="text" value="${name}" 
+                            oninput="updatePersonName(${i}, this.value)"
+                            class="flex-1 px-3 py-1 text-sm rounded border border-slate-200 focus:ring-1 focus:ring-emerald-500 outline-none">
+                    `;
+                    namesContainer.appendChild(div);
+                });
+            } else {
+                namesContainer.classList.add('hidden');
+            }
+        }
+
+        function updatePersonName(index, newName) {
+            personNames[index] = newName || `Person ${index + 1}`;
+            renderTable();
+        }
+
+        function updateCurrencySymbol() {
+            currencySymbol = currencySelector.value;
+            renderTable();
+        }
+
+        function addCategory() {
+            const name = categoryNameInput.value.trim();
+            if (!name) return;
+
+            categories.push({
+                id: Date.now(),
+                name: name,
+                values: Array(20).fill(0) 
+            });
+
+            categoryNameInput.value = '';
+            renderTable();
+        }
+
+        function removeCategory(id) {
+            categories = categories.filter(cat => cat.id !== id);
+            renderTable();
+        }
+
+        function updateValue(catId, personIdx, val) {
+            const category = categories.find(c => c.id === catId);
+            if (category) {
+                category.values[personIdx] = parseFloat(val) || 0;
+                calculateTotals();
+            }
+        }
+
+        function renderTable() {
+            let headerHtml = `<th class="p-4 text-sm font-semibold text-slate-600 min-w-[150px]">Category</th>`;
+            for (let i = 0; i < peopleCount; i++) {
+                headerHtml += `<th class="p-4 text-sm font-semibold text-slate-600 min-w-[120px] truncate max-w-[150px]">${personNames[i]}</th>`;
+            }
+            headerHtml += `<th class="p-4 text-sm font-semibold text-slate-600 min-w-[100px]">Row Total</th>`;
+            headerHtml += `<th class="p-4 text-sm font-semibold text-slate-600 w-[50px] no-pdf"></th>`;
+            tableHeader.innerHTML = headerHtml;
+
+            if (categories.length === 0) {
+                tableBody.innerHTML = '';
+                emptyState.style.display = 'block';
+                renderFooter();
+                updateChart([]);
+                calculateTotals();
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tableBody.innerHTML = categories.map(cat => {
+                let rowTotal = 0;
+                let inputsHtml = '';
+                for (let i = 0; i < peopleCount; i++) {
+                    const val = cat.values[i] || 0;
+                    rowTotal += val;
+                    inputsHtml += `
+                        <td class="p-2">
+                            <div class="relative group">
+                                <span class="absolute left-3 top-2 text-slate-400 text-xs">${currencySymbol}</span>
+                                <input type="number" step="0.01" value="${val || ''}" 
+                                    placeholder="0"
+                                    oninput="updateValue(${cat.id}, ${i}, this.value)"
+                                    class="w-full pl-6 pr-2 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
+                            </div>
+                        </td>
+                    `;
+                }
+
+                return `
+                    <tr class="animate-in group hover:bg-slate-50 transition-colors">
+                        <td class="p-4 font-medium text-slate-700">${cat.name}</td>
+                        ${inputsHtml}
+                        <td class="p-4 font-bold text-slate-800" id="row-total-${cat.id}">${currencySymbol} ${rowTotal.toFixed(2)}</td>
+                        <td class="p-4 text-right no-pdf">
+                            <button onclick="removeCategory(${cat.id})" class="text-slate-300 hover:text-red-500 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            renderFooter();
+            calculateTotals();
+        }
+
+        function renderFooter() {
+            let footerHtml = `<td class="p-4 text-slate-800">Totals</td>`;
+            for (let i = 0; i < peopleCount; i++) {
+                footerHtml += `<td class="p-4 text-emerald-600 font-bold" id="col-total-${i}">${currencySymbol} 0.00</td>`;
+            }
+            footerHtml += `<td class="p-4 text-slate-900" id="final-total">${currencySymbol} 0.00</td>`;
+            footerHtml += `<td class="no-pdf"></td>`;
+            tableFooter.innerHTML = footerHtml;
+        }
+
+        function calculateTotals() {
+            let grandTotal = 0;
+            const columnTotals = Array(peopleCount).fill(0);
+
+            categories.forEach(cat => {
+                let rowTotal = 0;
+                for (let i = 0; i < peopleCount; i++) {
+                    const val = cat.values[i] || 0;
+                    rowTotal += val;
+                    columnTotals[i] += val;
+                }
+                grandTotal += rowTotal;
+                
+                const rowEl = document.getElementById(`row-total-${cat.id}`);
+                if (rowEl) rowEl.textContent = `${currencySymbol} ${rowTotal.toFixed(2)}`;
+            });
+
+            columnTotals.forEach((total, i) => {
+                const colEl = document.getElementById(`col-total-${i}`);
+                if (colEl) colEl.textContent = `${currencySymbol} ${total.toFixed(2)}`;
+            });
+
+            const finalTotalEl = document.getElementById('final-total');
+            if (finalTotalEl) finalTotalEl.textContent = `${currencySymbol} ${grandTotal.toFixed(2)}`;
+            
+            grandTotalDisplay.textContent = `${currencySymbol} ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            
+            updateChart(columnTotals);
+        }
+
+        function updateChart(data) {
+            const canvas = document.getElementById('expenseChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const hasData = data.some(v => v > 0);
+
+            noDataChart.style.display = hasData ? 'none' : 'block';
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            if (!hasData) return;
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: personNames,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
+                            '#ec4899', '#06b6d4', '#f97316', '#64748b', '#14b8a6'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false, // Turn off animation for PDF capture stability
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                font: { size: 10 }
+                            }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+
+        function downloadPDF() {
+            if (categories.length === 0) {
+                alert("Please add at least one expense category before downloading.");
+                return;
+            }
+
+            const element = document.getElementById('exportArea');
+            const fileName = (expenseTitleInput.value || "expense_report").replace(/\s+/g, '_').toLowerCase();
+            
+            // Add a class to help style the export (hide buttons, simplify inputs)
+            element.classList.add('pdf-export');
+            
+            const opt = {
+                margin: 10,
+                filename: `${fileName}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                pagebreak: { mode: ['css', 'legacy'] }
+            };
+
+            // Capture the PDF
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.classList.remove('pdf-export');
+            });
+        }
+
+        // Initialize empty table
+        renderNamesInputs();
+        renderTable();
+    </script>
+</body>
+</html>
