@@ -3,103 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modern Expense Splitter</title>
+
+    <!-- SEO Meta Tags -->
+    <title>Spenderly | Free Expense Splitting Tool & Cost Sharer</title>
+    <meta name="description" content="Spenderly is a free, easy-to-use online tool to split bills and share expenses with friends and groups. Track costs for trips, rent, and parties with our intuitive visualizer and download PDF reports. No sign-up required.">
+    <meta name="keywords" content="expense splitter, bill splitter, cost sharer, group expenses, split costs, trip calculator, budget visualizer, share bills, group budget, free tool">
+    <link rel="canonical" href="https://www.spenderly.com/index.html"> <!-- TODO: Replace with your actual domain -->
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.spenderly.com/index.html"> <!-- TODO: Replace with your actual domain -->
+    <meta property="og:title" content="Spenderly | Free Expense Splitting Tool & Cost Sharer">
+    <meta property="og:description" content="Effortlessly split bills and share group expenses. Spenderly helps you track costs and visualize who owes what. Free, online, and no sign-up required.">
+    <meta property="og:image" content="https://www.spenderly.com/logo1.png"> <!-- TODO: Replace with your actual domain -->
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://www.spenderly.com/index.html"> <!-- TODO: Replace with your actual domain -->
+    <meta property="twitter:title" content="Spenderly | Free Expense Splitting Tool & Cost Sharer">
+    <meta property="twitter:description" content="Effortlessly split bills and share group expenses. Spenderly helps you track costs and visualize who owes what. Free, online, and no sign-up required.">
+    <meta property="twitter:image" content="https://www.spenderly.com/logo1.png"> <!-- TODO: Replace with your actual domain -->
+
+    <!-- Scripts and Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Library for PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-        }
-
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        }
-
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar {
-            height: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
-
-        .animate-in {
-            animation: fadeIn 0.3s ease-out forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        canvas {
-            max-width: 100% !important;
-            height: auto !important;
-        }
-
-        /* PDF specific styling to ensure inputs look like text in the export */
-        .pdf-export input {
-            border: none !important;
-            background: transparent !important;
-            padding-left: 0 !important;
-        }
-        .pdf-export .no-pdf {
-            display: none !important;
-        }
-        .pdf-export .pdf-page-break {
-            page-break-before: always;
-        }
-        /* PDF Export Fixes: Remove glass effects and enforce grid layout */
-        .pdf-export .glass-card {
-            background: #ffffff !important;
-            backdrop-filter: none !important;
-            box-shadow: none !important;
-            border: 1px solid #e2e8f0 !important;
-        }
-        .pdf-export .glass-card.bg-slate-800 {
-            background: #1e293b !important;
-            color: #ffffff !important;
-        }
-        /* Force 2-column layout for totals section in PDF */
-        .pdf-export .grid-cols-1.md\:grid-cols-2 {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        }
-        /* Fix for chart cutting and totals display in PDF */
-        .pdf-export canvas {
-            height: 100% !important;
-            width: 100% !important;
-        }
-        .pdf-export #grandTotalDisplay {
-            font-size: 2.5rem !important;
-            white-space: nowrap;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .animate-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        canvas { max-width: 100% !important; height: auto !important; }
+        .pdf-export input { border: none !important; background: transparent !important; padding-left: 0 !important; }
+        .pdf-export .no-pdf { display: none !important; }
+        .pdf-export .pdf-page-break { page-break-before: always; }
+        .pdf-export .glass-card { background: #ffffff !important; backdrop-filter: none !important; box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+        .pdf-export .glass-card.bg-slate-800 { background: #1e293b !important; color: #ffffff !important; }
+        .pdf-export .grid-cols-1.md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        .pdf-export canvas { height: 100% !important; width: 100% !important; }
+        .pdf-export #grandTotalDisplay { font-size: 2.5rem !important; white-space: nowrap; }
     </style>
+
+    <!-- AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+    <!-- TODO: Replace ca-pub-XXXXXXXXXXXXXXXX with your own Google AdSense publisher ID -->
+
+    <!-- JSON-LD Schema Markup -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Spenderly",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Any (Web)",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "A free web application for splitting group expenses, calculating costs, and visualizing financial distributions among users. Ideal for trips, household bills, and group projects.",
+      "featureList": [
+        "Expense Tracking",
+        "Bill Splitting",
+        "Cost Sharing Visualization",
+        "PDF Report Generation",
+        "Multi-currency support"
+      ],
+      "url": "https://www.spenderly.com/index.html",
+      "screenshot": "https://www.spenderly.com/logo1.png"
+    }
+    </script>
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-6xl mx-auto">
         <!-- Header -->
         <header class="mb-8 flex flex-col md:flex-row items-center justify-start gap-8">
-            <img src="logo1.png" alt="Spenderly" class="h-32 w-auto">
+            <a href="index.html">
+                <img src="logo1.png" alt="Spenderly Logo - Expense Splitting Tool" class="h-32 w-auto">
+            </a>
             <div class="text-left">
-                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Spenderly - Modern Expense Tracker & Visualizer</h1>
-                <p class="text-slate-500 mt-2">Divide costs and visualize distributions</p>
+                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Spenderly - Free Expense Splitter & Bill Sharing Tool</h1>
+                <p class="text-slate-500 mt-2">Divide costs, visualize distributions, and download PDF reports for free.</p>
             </div>
         </header>
 
@@ -516,5 +506,16 @@
         renderNamesInputs();
         renderTable();
     </script>
+    <footer class="text-center mt-8 py-4 text-slate-500 text-sm">
+        <div class="flex justify-center gap-4">
+            <a href="index.html" class="hover:text-emerald-600">Home</a>
+            <a href="about-us.html" class="hover:text-emerald-600">About Us</a>
+            <a href="contact-us.html" class="hover:text-emerald-600">Contact Us</a>
+            <a href="privacy-policy.html" class="hover:text-emerald-600">Privacy Policy</a>
+            <a href="terms-of-service.html" class="hover:text-emerald-600">Terms of Service</a>
+            <a href="disclaimer.html" class="hover:text-emerald-600">Disclaimer</a>
+        </div>
+        <p class="mt-4">&copy; 2026 Spenderly. All rights reserved.</p>
+    </footer>
 </body>
 </html>

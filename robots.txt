@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://www.spenderly.com/sitemap.xml
+# TODO: Replace with your actual domain
